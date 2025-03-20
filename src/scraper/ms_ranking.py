@@ -1,9 +1,23 @@
 import requests
-import re
+from dotenv import load_dotenv
 from datetime import datetime
 from bs4 import BeautifulSoup
 import pandas as pd
 import os
+import boto3
+import pyarrow.parquet as pq
+import pyarrow as pa
+import io
+
+load_dotenv()
+s3_bucket = os.getenv("S3_BUCKET")
+s3_key = os.getenv("AWS_MS_RANKING")
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY"),
+    region_name= os.getenv("AWS_REGION")
+)
 
 url = "https://tennisabstract.com/reports/atp_elo_ratings.html"
 headers = {
@@ -43,9 +57,39 @@ if response.status_code == 200:
     df = pd.DataFrame(rankings, columns=["Elo Rank", "Player", "Age", "Elo", "Hard Elo Rank", "Hard Elo", 
                                          "Clay Elo Rank", "Clay Elo", "Grass Elo Rank", "Grass Elo", 
                                          "Peak Month", "Atp Rank", "Log Diff"])
-    df = df.head(200)
+    df_ranking = df.head(200).copy() 
+    df_ranking = df_ranking.drop_duplicates()
+
+    # since the scraped uses /xa0 (non breaking space)
+    df_ranking["Player"] = df_ranking["Player"].str.replace("\xa0", " ", regex=True)
+
+    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
+    #     print(df_ranking)
+
+    # access the player list (id)
+    player_id_file = "atp_players.csv"
+    player_id_obj = s3_client.get_object(Bucket=s3_bucket, Key=player_id_file)
+    df_player_ids = pd.read_csv(io.BytesIO(player_id_obj["Body"].read()), dtype={"wikidata_id": str})
+
+    # format player_id and names
+    df_player_ids["Player"] = df_player_ids["name_first"] + " " + df_player_ids["name_last"]
+    df_player_ids = df_player_ids[["Player", "player_id"]]
+    df_player_ids["player_id"] = df_player_ids["player_id"].astype(str)
+
+    df_merged = df_ranking.merge(df_player_ids, how="left", on="Player")
+    df_merged = df_merged.dropna(subset=["player_id"])  # drop players w no id
+    df_merged["player_id"] = df_merged["player_id"].astype(str)  
+    df_merged = df_merged.drop_duplicates(subset=["Player"], keep="first")
+
+    print(df_merged)
+
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
-        print(df)
+        print(df_merged)
+
+    # df_ranking["Player"] = df_ranking["Player"].str.strip()
+    # df_player_ids["Player"] = df_player_ids["Player"].str.strip()
+    # print("Unique Player Names in df_ranking:\n", df_ranking["Player"].unique()[:10])
+    # print("Unique Player Names in df_player_ids:\n", df_player_ids["Player"].unique()[:10])
 
 else:
     print(f"Failed to retrieve data: {response.status_code}")
