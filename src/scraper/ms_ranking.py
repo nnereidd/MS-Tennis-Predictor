@@ -43,7 +43,7 @@ if response.status_code == 200:
     df = pd.DataFrame(rankings, columns=["Elo Rank", "Player", "Age", "Elo", "Hard Elo Rank", "Hard Elo", 
                                          "Clay Elo Rank", "Clay Elo", "Grass Elo Rank", "Grass Elo", 
                                          "Peak Month", "Atp Rank", "Log Diff"])
-    df = df.head(201)
+    df = df.head(200)
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
         print(df)
 
