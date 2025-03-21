@@ -8,6 +8,7 @@ import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
 import io
+from scraper_functions import log_scraped_data
 
 load_dotenv()
 s3_bucket = os.getenv("S3_BUCKET")
@@ -79,22 +80,18 @@ if response.status_code == 200:
     df_merged = df_merged.dropna(subset=["player_id"])  # drop players w no id
     df_merged["player_id"] = df_merged["player_id"].astype(str)  
 
-    print(df_merged)
-
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
-        print(df_merged)
+    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
+    #     print(df_merged)
 
     buffer = io.BytesIO()
     table = pa.Table.from_pandas(df_merged)
     pq.write_table(table, buffer) # parquet to bucket
 
     buffer.seek(0) 
-    s3_client.put_object(Bucket=s3_bucket, Key="raw/rankings/ms_rankings.parquet", Body=buffer.getvalue())
+    s3_client.put_object(Bucket=s3_bucket, Key="raw/rankings/ms_rankings.parquet", Body=buffer.getvalue())  
+    print("Logged into: raw/rankings/")
 
-    # df_ranking["Player"] = df_ranking["Player"].str.strip()
-    # df_player_ids["Player"] = df_player_ids["Player"].str.strip()
-    # print("Unique Player Names in df_ranking:\n", df_ranking["Player"].unique()[:10])
-    # print("Unique Player Names in df_player_ids:\n", df_player_ids["Player"].unique()[:10])
+    log_scraped_data(df_merged, "ms_rankings.parquet")
 
 else:
     print(f"Failed to retrieve data: {response.status_code}")
