@@ -8,9 +8,12 @@ import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
 import io
-from scraper_functions import log_scraped_data
-from scraper_functions import log_text
-from scraper_functions import flush_log_to_s3
+from scraper_functions import (
+    log_scraped_data,
+    log_text,
+    flush_log_to_s3,
+    log_lines, 
+)
 
 load_dotenv()
 s3_bucket = os.getenv("S3_BUCKET")
@@ -104,5 +107,4 @@ except Exception as e:
 
 finally:
     flush_log_to_s3("ms_ranking_log")
-    from scraper_functions import log_lines
     log_lines.clear()
