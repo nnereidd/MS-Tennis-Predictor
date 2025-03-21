@@ -29,11 +29,11 @@ def get_edge_driver():
     service = Service(driver_path)
     return webdriver.Edge(service=service, options=options)
 
-def scrape_nine_pages(player_id, url_id):
-    # function to scrape and iterate through the 9 pages
+def scrape_player_statistics(player_id, url_id):
+    # function to scrape and iterate through the player_statistics pages
 
     driver = get_edge_driver()
-    url = f"https://www.tennisabstract.com/cgi-bin/player-more.cgi?p={player_id}&table={url_id}"
+    url = "https://www.tennisabstract.com/cgi-bin/player-more.cgi?p=" + player_id + "/Jannik-Sinner&table=" + url_id
     driver.get(url)
     html = driver.page_source
     driver.quit()
