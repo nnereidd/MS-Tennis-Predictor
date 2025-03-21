@@ -57,8 +57,7 @@ if response.status_code == 200:
     df = pd.DataFrame(rankings, columns=["Elo Rank", "Player", "Age", "Elo", "Hard Elo Rank", "Hard Elo", 
                                          "Clay Elo Rank", "Clay Elo", "Grass Elo Rank", "Grass Elo", 
                                          "Peak Month", "Atp Rank", "Log Diff"])
-    df_ranking = df.head(200).copy() 
-    df_ranking = df_ranking.drop_duplicates()
+    df_ranking = df.head(150).copy() 
 
     # since the scraped uses /xa0 (non breaking space)
     df_ranking["Player"] = df_ranking["Player"].str.replace("\xa0", " ", regex=True)
@@ -79,12 +78,18 @@ if response.status_code == 200:
     df_merged = df_ranking.merge(df_player_ids, how="left", on="Player")
     df_merged = df_merged.dropna(subset=["player_id"])  # drop players w no id
     df_merged["player_id"] = df_merged["player_id"].astype(str)  
-    df_merged = df_merged.drop_duplicates(subset=["Player"], keep="first")
 
     print(df_merged)
 
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
         print(df_merged)
+
+    local_parquet_file = "ms_rankings"
+    table = pa.Table.from_pandas(df_merged)
+    pq.write_table(table, local_parquet_file) # parquet to bucket
+
+    s3_client.upload_file("ms_rankings.parquet", s3_bucket, "raw/rankings/ms_rankings.parquet")
+    print(f"Uploaded to S3")
 
     # df_ranking["Player"] = df_ranking["Player"].str.strip()
     # df_player_ids["Player"] = df_player_ids["Player"].str.strip()
