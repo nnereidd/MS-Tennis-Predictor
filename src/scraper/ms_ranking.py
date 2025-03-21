@@ -84,12 +84,12 @@ if response.status_code == 200:
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
         print(df_merged)
 
-    local_parquet_file = "ms_rankings"
+    buffer = io.BytesIO()
     table = pa.Table.from_pandas(df_merged)
-    pq.write_table(table, local_parquet_file) # parquet to bucket
+    pq.write_table(table, buffer) # parquet to bucket
 
-    s3_client.upload_file("ms_rankings.parquet", s3_bucket, "raw/rankings/ms_rankings.parquet")
-    print(f"Uploaded to S3")
+    buffer.seek(0) 
+    s3_client.put_object(Bucket=s3_bucket, Key="raw/rankings/ms_rankings.parquet", Body=buffer.getvalue())
 
     # df_ranking["Player"] = df_ranking["Player"].str.strip()
     # df_player_ids["Player"] = df_player_ids["Player"].str.strip()
