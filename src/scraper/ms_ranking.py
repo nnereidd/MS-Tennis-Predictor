@@ -8,6 +8,7 @@ import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
 import io
+import json
 from scraper_functions import (
     log_scraped_data,
     log_text,
@@ -90,6 +91,9 @@ try:
         # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
         #     print(df_merged)
 
+        player_list = df_merged[["Player", "player_id"]].to_dict(orient="records") 
+        json_data = json.dumps(player_list) # make json of player_id
+
         buffer = io.BytesIO()
         table = pa.Table.from_pandas(df_merged)
         pq.write_table(table, buffer) # parquet to bucket
@@ -97,6 +101,9 @@ try:
         buffer.seek(0) 
         s3_client.put_object(Bucket=s3_bucket, Key="raw/rankings/ms_rankings.parquet", Body=buffer.getvalue()) 
         log_text("Logged ACTUAL DATA ms_ranking.parquet into: raw/rankings/") 
+
+        s3_client.put_object(Bucket=s3_bucket, Key="raw/rankings/player_list.json", Body=json_data) 
+        log_text("Logged player list json file into: raw/rankings/") 
 
         log_scraped_data(df_merged, "ms_rankings", "raw/rankings")
         log_text("Logged LOG DATA ms_ranking.parquet into: logs/raw/rankings/") 
