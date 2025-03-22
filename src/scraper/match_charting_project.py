@@ -35,7 +35,7 @@ url_ids = ["mcp-serve", "mcp-return", "mcp-rally", "mcp-tactics"]
 
 for index, row in df_player_ids.iloc[:1].iterrows(): 
     player_id = str(row["player_id"])
-    player_name = row["Player"].strip().replace(" ", "-")  # clean name for S3 path
+    player_name = row["Player"].strip().replace(" ", "").lower()  # clean name for S3 path
     folder_name = f"{player_name}-{player_id}"
 
     for url_id in url_ids: # loop through the respective pages per player

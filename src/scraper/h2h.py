@@ -16,25 +16,73 @@ from scraper_functions import (
     get_edge_driver
 )
 
-driver = get_edge_driver()
-url = f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p=JannikSinner&f=ACareerqqw1&q=BenShelton&q=BenShelton"
-driver.get(url)
-html = driver.page_source
-driver.quit()
+load_dotenv()
+s3_bucket = os.getenv("S3_BUCKET")
+s3_key = os.getenv("AWS_MS_RANKING")
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY"),
+    region_name= os.getenv("AWS_REGION")
+)
 
-soup = BeautifulSoup(html, "html.parser")
-table = soup.find("table", {"id": "matches"})
+player_id_file = "raw/rankings/ms_rankings.parquet"
+player_id_obj = s3_client.get_object(Bucket=s3_bucket, Key=player_id_file)
+parquet_bytes = io.BytesIO(player_id_obj["Body"].read())
+df_player_ids = pd.read_parquet(parquet_bytes, engine="pyarrow")
 
-rows = table.find_all("tr")
-headers = [header.text.strip() for header in rows[0].find_all("th")]
-data = []
+for index, row in df_player_ids.iloc[:2].iterrows(): 
+    player_id = str(row["player_id"])
+    player_url_name = row["Player"].strip().replace(" ", "")
+    player_name = row["Player"].strip().replace(" ", "").lower()  # clean name for S3 path
+    folder_name = f"{player_name}-{player_id}"
 
-for row in rows[1:]:
-    columns = [col.text.strip() for col in row.find_all("td")]
-    if columns:
-        data.append(columns)
+    df_opponents = df_player_ids[df_player_ids["player_id"] != player_id] # get player_id of opponents
+    
+    for _, opponent_row in df_opponents.iloc[:2].iterrows():
+        opponent_url_name = opponent_row["Player"].strip().replace(" ", "")
+        opponent_name = opponent_row["Player"].strip().replace(" ", "").lower()
+        opponent_id = str(opponent_row["player_id"])
+        try:
+            driver = get_edge_driver()
+            url = f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player_url_name}&f=ACareerqqw1&q={opponent_url_name}&q={opponent_url_name}"
+            driver.get(url)
+            html = driver.page_source
+            driver.quit()
 
-df_h2h = pd.DataFrame(data, columns=headers)
+            soup = BeautifulSoup(html, "html.parser")
+            table = soup.find("table", {"id": "matches"})
 
-with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
-    print(df_h2h)
+            rows = table.find_all("tr")
+            headers = [header.text.strip() for header in rows[0].find_all("th")]
+            data = []
+
+            for row in rows[1:]:
+                columns = [col.text.strip() for col in row.find_all("td")]
+                if columns:
+                    data.append(columns)
+
+            df_h2h = pd.DataFrame(data, columns=headers)
+
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
+                print(df_h2h)
+
+            buffer = io.BytesIO()
+            table = pa.Table.from_pandas(df_h2h) # df to parquet
+            pq.write_table(table, buffer)
+            buffer.seek(0)
+
+            # uploads
+            s3_path = f"raw/h2h/{folder_name}/{opponent_name}-{opponent_id}.parquet"
+            s3_client.upload_fileobj(buffer, s3_bucket, s3_path)
+            log_text(f"Uploaded {s3_path}")
+
+            log_scraped_data(df_h2h, f"{player_name}-{player_id}_vs_{opponent_name}-{opponent_id}", f"raw/h2h/{folder_name}")
+            log_text(f"Logged ACTUAL DATA into logs/raw/h2h/{folder_name}")
+
+        except Exception as e:
+            log_text(f"Error scraping {player_name}-{player_id} vs {opponent_name}-{opponent_id}: {e}")
+            continue
+
+flush_log_to_s3("h2h")
+log_lines.clear()

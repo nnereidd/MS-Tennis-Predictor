@@ -35,7 +35,7 @@ url_ids = ["winners-errors", "serve-speed", "pbp-games", "pbp-points", "pbp-stat
 
 for index, row in df_player_ids.iloc[:1].iterrows(): 
     player_id = str(row["player_id"])
-    player_name = row["Player"].strip().replace(" ", "-")  # clean name for S3 path
+    player_name = row["Player"].strip().replace(" ", "").lower()  # clean name for S3 path
     folder_name = f"{player_name}-{player_id}"
 
     for url_id in url_ids: # loop through the respective pages per player
@@ -57,7 +57,7 @@ for index, row in df_player_ids.iloc[:1].iterrows():
             log_text(f"Logged ACTUAL DATA into logs/raw/player_statistics/{folder_name}")
 
         except Exception as e:
-            log_text(f"Error scraping {player_id} ({player_name})-{url_id}: {e}")
+            log_text(f"Error scraping {player_id}({player_name})-{url_id}: {e}")
             continue
 
 flush_log_to_s3("player_statistics_log")
