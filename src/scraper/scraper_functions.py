@@ -64,7 +64,7 @@ def log_scraped_data(df, file_name, path_name):
     key = f"logs/{path_name}/{file_name}_{timestamp}.parquet"
 
     s3_client.put_object(Bucket=s3_bucket, Key=key, Body=buffer.getvalue())
-    print(f"Logged/{file_name} into: logs/{path_name}")
+    print(f"Logged {file_name} into: logs/{path_name}")
 
 def log_text(message: str):
     # append message to list (will be for logging data messages)
@@ -86,7 +86,7 @@ def flush_log_to_s3(file_prefix="scrape_log"):
 
     buffer.seek(0)
     s3_client.put_object(Bucket=s3_bucket, Key=key, Body=buffer.getvalue())
-    print(f"Log file uploaded to: s3")
+    print(f"Log text file uploaded to: s3")
 
 
 

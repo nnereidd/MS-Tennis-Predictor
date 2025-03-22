@@ -14,6 +14,7 @@ from scraper_functions import (
     log_text,
     flush_log_to_s3,
     log_lines, 
+    get_edge_driver
 )
 
 load_dotenv()
@@ -26,33 +27,38 @@ s3_client = boto3.client(
     region_name= os.getenv("AWS_REGION")
 )
 
-url_ids = ["winners-errors", "serve-speed"]
-test_player_ids = ["206173", "104925"]
+player_id_file = "raw/rankings/ms_rankings.parquet"
+player_id_obj = s3_client.get_object(Bucket=s3_bucket, Key=player_id_file)
+parquet_bytes = io.BytesIO(player_id_obj["Body"].read())
+df_player_ids = pd.read_parquet(parquet_bytes, engine="pyarrow")
 
-for player_id in test_player_ids:
-    for url_id in url_ids:
+url_ids = ["winners-errors", "serve-speed", "pbp-games", "pbp-points", "pbp-stats"]
+
+for index, row in df_player_ids.iloc[:3].iterrows(): 
+    player_id = str(row["player_id"])
+    player_name = row["Player"].strip().replace(" ", "-")  # clean name for S3 path
+    folder_name = f"{player_name}-{player_id}"
+
+    for url_id in url_ids: # loop through the respective pages per player
         try:
-            log_text(f"Scraping {player_id} - {url_id}")
+            log_text(f"Scraping {player_id} ({player_name})-{url_id}")
             df_stats = scrape_player_statistics(player_id, url_id)
 
             buffer = io.BytesIO()
-            table = pa.Table.from_pandas(df_stats)
-            pq.write_table(table, buffer) # parquet to bucket
-            buffer.seek(0) 
-
-            s3_path = f"raw/player_statistics/{player_id}/{url_id}.parquet"
+            table = pa.Table.from_pandas(df_stats) # df to parquet
+            pq.write_table(table, buffer)
+            buffer.seek(0)
+            # uploads
+            s3_path = f"raw/player_statistics/{folder_name}/{url_id}.parquet"
             s3_client.upload_fileobj(buffer, s3_bucket, s3_path)
             log_text(f"Uploaded {s3_path}")
 
-            log_scraped_data(df_stats, f"{player_id} - {url_id}", f"raw/player_statistics/{player_id}")
-            log_text(f"Logged ACTUAL DATA {player_id} - {url_id}.parquet into: logs/raw/player_statistics/{player_id}") 
+            log_scraped_data(df_stats, f"{player_id}-{url_id}", f"raw/player_statistics/{folder_name}")
+            log_text(f"Logged ACTUAL DATA into logs/raw/player_statistics/{folder_name}")
 
         except Exception as e:
-            log_text(f"Error scraping {player_id} - {url_id}: {e}")
-            continue 
+            log_text(f"Error scraping {player_id} ({player_name})-{url_id}: {e}")
+            continue
 
 flush_log_to_s3("player_statistics_log")
 log_lines.clear()
-
-
-
