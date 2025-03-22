@@ -29,8 +29,20 @@ def get_edge_driver():
     service = Service(driver_path)
     return webdriver.Edge(service=service, options=options)
 
-def scrape_player_statistics(player_id, url_id):
-    # function to scrape and iterate through the player_statistics pages
+def make_column_names_unique(headers):
+    dup = {}
+    new_headers = []
+    for col in headers:
+        if col in dup:
+            dup[col] += 1
+            new_headers.append(f"{col}.{dup[col]}")
+        else:
+            dup[col] = 0
+            new_headers.append(col)
+    return new_headers
+
+def scrape_webpage(player_id, url_id):
+    # function to scrape and iterate through the required pages
 
     driver = get_edge_driver()
     url = "https://www.tennisabstract.com/cgi-bin/player-more.cgi?p=" + player_id + "/Jannik-Sinner&table=" + url_id
@@ -42,7 +54,7 @@ def scrape_player_statistics(player_id, url_id):
     table = soup.find("table", {"id": url_id})
 
     rows = table.find_all("tr")
-    headers = [header.text.strip() for header in rows[0].find_all("th")]
+    headers = make_column_names_unique([header.text.strip() for header in rows[0].find_all("th")])
     data = []
 
     for row in rows[1:]:
@@ -78,6 +90,8 @@ def flush_log_to_s3(file_prefix="scrape_log"):
     if not log_lines:
         return  # nothing to upload
 
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_lines.append(f"[{timestamp}] Log text file uploaded to: s3")
     full_log = "\n".join(log_lines)
     buffer = io.BytesIO(full_log.encode("utf-8"))
 
