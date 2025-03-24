@@ -87,6 +87,7 @@ try:
         df_merged = df_ranking.merge(df_player_ids, how="left", on="Player")
         df_merged = df_merged.dropna(subset=["player_id"])  # drop players w no id
         df_merged["player_id"] = df_merged["player_id"].astype(str)  
+        df_merged["Player"] = df_merged["Player"].str.strip().str.replace(" ", "", regex=False)
 
         # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
         #     print(df_merged)

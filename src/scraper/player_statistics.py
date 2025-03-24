@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 from selenium import webdriver
 from selenium.webdriver.edge.service import Service
 from bs4 import BeautifulSoup
@@ -26,10 +27,10 @@ s3_client = boto3.client(
     region_name= os.getenv("AWS_REGION")
 )
 
-player_id_file = "raw/rankings/ms_rankings.parquet"
+player_id_file = "raw/rankings/player_list.json"
 player_id_obj = s3_client.get_object(Bucket=s3_bucket, Key=player_id_file)
-parquet_bytes = io.BytesIO(player_id_obj["Body"].read())
-df_player_ids = pd.read_parquet(parquet_bytes, engine="pyarrow")
+player_list = json.loads(player_id_obj["Body"].read())
+df_player_ids = pd.DataFrame(player_list)
 
 url_ids = ["winners-errors", "serve-speed", "pbp-games", "pbp-points", "pbp-stats"]
 

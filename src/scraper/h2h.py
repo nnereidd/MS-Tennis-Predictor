@@ -4,6 +4,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import pandas as pd
 import os
+import json
 import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
@@ -26,22 +27,22 @@ s3_client = boto3.client(
     region_name= os.getenv("AWS_REGION")
 )
 
-player_id_file = "raw/rankings/ms_rankings.parquet"
+player_id_file = "raw/rankings/player_list.json"
 player_id_obj = s3_client.get_object(Bucket=s3_bucket, Key=player_id_file)
-parquet_bytes = io.BytesIO(player_id_obj["Body"].read())
-df_player_ids = pd.read_parquet(parquet_bytes, engine="pyarrow")
+player_list = json.loads(player_id_obj["Body"].read())
+df_player_ids = pd.DataFrame(player_list)
 
 for index, row in df_player_ids.iloc[:2].iterrows(): 
     player_id = str(row["player_id"])
-    player_url_name = row["Player"].strip().replace(" ", "")
-    player_name = row["Player"].strip().replace(" ", "").lower()  # clean name for S3 path
+    player_url_name = str(row["Player"])
+    player_name = row["Player"].strip().lower()  # clean name for S3 path
     folder_name = f"{player_name}-{player_id}"
 
     df_opponents = df_player_ids[df_player_ids["player_id"] != player_id] # get player_id of opponents
     
     for _, opponent_row in df_opponents.iloc[:2].iterrows():
-        opponent_url_name = opponent_row["Player"].strip().replace(" ", "")
-        opponent_name = opponent_row["Player"].strip().replace(" ", "").lower()
+        opponent_url_name = str(opponent_row["Player"])
+        opponent_name = opponent_row["Player"].strip().lower()
         opponent_id = str(opponent_row["player_id"])
         try:
             driver = get_edge_driver()

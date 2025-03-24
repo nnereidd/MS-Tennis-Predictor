@@ -46,7 +46,7 @@ def scrape_webpage(player_id, url_id):
 
     driver = get_edge_driver()
     url = "https://www.tennisabstract.com/cgi-bin/player-more.cgi?p=" + player_id + "/Jannik-Sinner&table=" + url_id
-    driver.get(url)
+    driver.get(url)                                                                 # this part is only image
     html = driver.page_source
     driver.quit()
 
