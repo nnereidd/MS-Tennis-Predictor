@@ -96,10 +96,9 @@ try:
         json_data = json.dumps(player_list) # make json of player_id
 
         buffer = io.BytesIO()
-        table = pa.Table.from_pandas(df_merged)
-        pq.write_table(table, buffer) # parquet to bucket
-
+        df_merged.to_parquet(buffer, engine="pyarrow", index=False)
         buffer.seek(0) 
+
         s3_client.put_object(Bucket=s3_bucket, Key="raw/rankings/ms_rankings.parquet", Body=buffer.getvalue()) 
         log_text("Logged ACTUAL DATA ms_ranking.parquet into: raw/rankings/") 
 

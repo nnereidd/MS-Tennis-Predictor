@@ -34,7 +34,7 @@ df_player_ids = pd.DataFrame(player_list)
 
 url_ids = ["winners-errors", "serve-speed", "pbp-games", "pbp-points", "pbp-stats"]
 
-for index, row in df_player_ids.iloc[:1].iterrows(): 
+for index, row in df_player_ids.iloc[:2].iterrows(): 
     player_id = str(row["player_id"])
     player_name = row["Player"].strip().replace(" ", "").lower()  # clean name for S3 path
     folder_name = f"{player_name}-{player_id}"
@@ -45,8 +45,7 @@ for index, row in df_player_ids.iloc[:1].iterrows():
             df_stats = scrape_webpage(player_id, url_id)
 
             buffer = io.BytesIO()
-            table = pa.Table.from_pandas(df_stats) # df to parquet
-            pq.write_table(table, buffer)
+            df_stats.to_parquet(buffer, engine="pyarrow", index=False) # df to parquet
             buffer.seek(0)
 
             # uploads

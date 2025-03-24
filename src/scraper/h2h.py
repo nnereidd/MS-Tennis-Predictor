@@ -69,8 +69,7 @@ for index, row in df_player_ids.iloc[:2].iterrows():
                 print(df_h2h)
 
             buffer = io.BytesIO()
-            table = pa.Table.from_pandas(df_h2h) # df to parquet
-            pq.write_table(table, buffer)
+            df_h2h.to_parquet(buffer, engine="pyarrow", index=False)
             buffer.seek(0)
 
             # uploads
