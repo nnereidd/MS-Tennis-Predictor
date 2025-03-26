@@ -14,11 +14,8 @@ from cleaner_functions import (
     log_text,
     flush_log_to_s3,
     log_lines, 
-    clean_winners_errors,
-    clean_serve_speed,
-    clean_pbp_stats,
-    clean_pbp_points,
-    clean_pbp_games
+    clean_we_ss_pbps,
+    clean_kp_kg
 )
 
 load_dotenv()
@@ -32,12 +29,41 @@ s3_client = boto3.client(
 )
 
 cleaning_map = {
-    "winners-errors": clean_winners_errors,
-    "serve-speed": clean_serve_speed,
-    "pbp-stats": clean_pbp_stats,
-    "pbp-points": clean_pbp_points,
-    "pbp-games": clean_pbp_games
+    "winners-errors": clean_we_ss_pbps,
+    "serve-speed": clean_we_ss_pbps,
+    "pbp-stats": clean_we_ss_pbps,
+    "pbp-points": clean_kp_kg,
+    "pbp-games": clean_kp_kg
 }
 
 prefix = "raw/player_statistics/"
 response = s3_client.list_objects_v2(Bucket=s3_bucket, Prefix=prefix)
+
+for obj in response.get("Contents", []):
+    key = obj["Key"]
+    if not key.endswith(".parquet"):
+        continue # skip non parquet
+
+    parts = key.split("/")
+    if len(parts) != 4:
+        continue  # based on our file naming formates
+
+    player_folder = parts[2]  # player folder
+    file_name = parts[3].replace(".parquet", "") 
+    print(f"Processing {key}...")
+
+    clean_fn = cleaning_map.get(file_name)
+
+    response = s3_client.get_object(Bucket=s3_bucket, Key=key)
+    buffer = io.BytesIO(response["Body"].read())
+    table = pq.read_table(buffer)
+    df = table.to_pandas()
+
+    cleaned_df = clean_fn(df)
+
+    output_key = key.replace("raw/", "processed/")
+    output_buffer = io.BytesIO()
+    pq.write_table(pa.Table.from_pandas(cleaned_df), output_buffer, compression="snappy")
+    s3_client.put_object(Bucket=s3_bucket, Key=output_key, Body=output_buffer.getvalue())
+
+    print(f"Cleaned and saved to {output_key}")

@@ -6,6 +6,7 @@ import boto3
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pandas as pd
+import re
 
 load_dotenv()
 s3_client = boto3.client("s3")
@@ -51,17 +52,92 @@ def flush_log_to_s3(file_prefix="scrape_log"):
     s3_client.put_object(Bucket=s3_bucket, Key=key, Body=buffer.getvalue())
     print(f"Log text file uploaded to: s3")
 
-def clean_winners_errors(player_id):
-    pass
+def clean_column_name(name):
+    return(
+        name.replace('\xa0', ' ')
+            .replace('/', 'per')
+            .replace('%', '')
+            .replace(' ', '_')
+            .lower()
+            .strip()
+    )
 
-def clean_serve_speed(player_id):
-    pass
+def remove_bracketed_text(s):
+    if isinstance(s, str):
+        return re.sub(r'\s*\([^)]*\)', '', s).strip()
+    return s
 
-def clean_pbp_stats(player_id):
-    pass
+def clean_match_results(value):
+    if not isinstance(value, str):
+        return value
+    value = value.strip().lower()
 
-def clean_pbp_points(player_id):
-    pass
+    if re.match(r'^w\s+vs', value, re.IGNORECASE):
+        return "win"
+    elif re.match(r'^l\s+vs', value, re.IGNORECASE):
+        return "loss"
+    return value.replace(' ', '_')
 
-def clean_pbp_games(player_id):
-    pass
+def convert_ratios_percentages(value):
+    try:
+        if isinstance(value, str):
+            value = value.strip()
+            # handle percentages
+            if value.endswith("%"):
+                num = float(value.rstrip("%").strip())
+                return num / 100
+            
+            if "/" in value: # handle ratios
+                num, denom = value.split("/")
+                num = float(num.strip())
+                denom = float(denom.strip())
+                return num / 100* denom if denom != 0 else pd.NA
+
+        return pd.to_numeric(value, errors="coerce")
+
+    except:
+        return pd.NA
+
+
+def clean_we_ss_pbps(df):
+# cleans winners-errors, serve speed and pbp stats data
+
+    df.columns = [clean_column_name(col) for col in df.columns]
+    skip_cols = ["match", "result"]
+
+    for col in df.columns:
+        if col not in skip_cols:
+            df[col] = pd.to_numeric(df[col].replace("%", "", regex=True), errors="coerce") # normalize decimals
+            df[col] = df[col] / 100
+        else:
+            df[col] = df[col].astype(str).apply(clean_match_results)
+
+    df = df.replace(r'^\s*$|^–$|^-$', pd.NA, regex=True)
+
+    return df
+
+def clean_kp_kg(df): # clean key points and key games (due to different values in some columns)
+
+    df.columns = [clean_column_name(col) for col in df.columns]
+    skip_cols = ["match", "result"]
+
+    for col in df.columns:
+        if df[col].dtype == "object":
+            df[col] = df[col].apply(remove_bracketed_text)
+
+    for col in skip_cols:
+        if col in df.columns:
+            df[col] = df[col].astype(str).apply(clean_match_results)
+
+    for col in df.columns:
+        if col not in skip_cols:
+            df[col] = df[col].apply(convert_ratios_percentages)
+            df[col] = pd.to_numeric(df[col].replace("%", "", regex=True), errors="coerce")
+    else:
+            df[col] = df[col].astype(str).apply(clean_match_results)
+
+    df = df.replace(r'^\s*$|^–$|^-$|^0/0$', pd.NA, regex=True)
+
+    return df
+
+
