@@ -113,5 +113,5 @@ except Exception as e:
     raise
 
 finally:
-    flush_log_to_s3("ms_ranking_log")
+    flush_log_to_s3("scrape/ms_ranking_log")
     log_lines.clear()

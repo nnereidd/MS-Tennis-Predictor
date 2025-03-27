@@ -67,15 +67,25 @@ def remove_bracketed_text(s):
         return re.sub(r'\s*\([^)]*\)', '', s).strip()
     return s
 
+import re
+
 def clean_match_results(value):
     if not isinstance(value, str):
         return value
     value = value.strip().lower()
 
-    if re.match(r'^w\s+vs', value, re.IGNORECASE):
-        return "win"
-    elif re.match(r'^l\s+vs', value, re.IGNORECASE):
-        return "loss"
+    match_win = re.match(r'^w\s+vs\s+(.*)', value)
+    match_loss = re.match(r'^l\s+vs\s+(.*)', value)
+
+    if match_win:
+        opponent = match_win.group(1).strip().replace(' ', '_')
+        opponent_cleaned = re.sub(r'\s+', '', opponent)
+        return f"win_{opponent_cleaned}"
+    elif match_loss:
+        opponent = match_loss.group(1).strip().replace(' ', '_')
+        opponent_cleaned = re.sub(r'\s+', '', opponent)
+        return f"loss_{opponent_cleaned}"
+
     return value.replace(' ', '_')
 
 def convert_ratios_percentages(value):
@@ -91,26 +101,30 @@ def convert_ratios_percentages(value):
                 num, denom = value.split("/")
                 num = float(num.strip())
                 denom = float(denom.strip())
-                return num / 100* denom if denom != 0 else pd.NA
+                return (num / denom)* 100 if denom != 0 else pd.NA
 
         return pd.to_numeric(value, errors="coerce")
 
     except:
         return pd.NA
 
-
 def clean_we_ss_pbps(df):
 # cleans winners-errors, serve speed and pbp stats data
 
     df.columns = [clean_column_name(col) for col in df.columns]
-    skip_cols = ["match", "result"]
 
     for col in df.columns:
-        if col not in skip_cols:
-            df[col] = pd.to_numeric(df[col].replace("%", "", regex=True), errors="coerce") # normalize decimals
-            df[col] = df[col] / 100
-        else:
+        if col == "match":
+            df[col] = df[col].astype(str).str.replace(r"\s+", "_", regex=True).str.lower().str.strip()
+
+        elif col == "result":
             df[col] = df[col].astype(str).apply(clean_match_results)
+
+        else:
+            if df[col].astype(str).str.contains('%').any():
+                df[col] = pd.to_numeric(df[col].replace("%", "", regex=True), errors="coerce") / 100
+            else:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df = df.replace(r'^\s*$|^–$|^-$', pd.NA, regex=True)
 
@@ -121,23 +135,22 @@ def clean_kp_kg(df): # clean key points and key games (due to different values i
     df.columns = [clean_column_name(col) for col in df.columns]
     skip_cols = ["match", "result"]
 
-    for col in df.columns:
+    for col in df.columns: 
         if df[col].dtype == "object":
             df[col] = df[col].apply(remove_bracketed_text)
 
-    for col in skip_cols:
-        if col in df.columns:
-            df[col] = df[col].astype(str).apply(clean_match_results)
+        if col == "match":
+            df[col] = df[col].astype(str).str.replace(r"\s+", "_", regex=True).str.lower().str.strip()
 
-    for col in df.columns:
-        if col not in skip_cols:
-            df[col] = df[col].apply(convert_ratios_percentages)
-            df[col] = pd.to_numeric(df[col].replace("%", "", regex=True), errors="coerce")
-    else:
+        elif col == "result":
             df[col] = df[col].astype(str).apply(clean_match_results)
+        
+        else:
+            if df[col].astype(str).str.contains('%').any():
+                df[col] = pd.to_numeric(df[col].replace("%", "", regex=True), errors="coerce")/100
+            df[col] = df[col].apply(convert_ratios_percentages)
 
     df = df.replace(r'^\s*$|^–$|^-$|^0/0$', pd.NA, regex=True)
 
     return df
-
 

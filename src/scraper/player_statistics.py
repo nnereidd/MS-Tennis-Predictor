@@ -60,5 +60,5 @@ for index, row in df_player_ids.iloc[:2].iterrows():
             log_text(f"Error scraping {player_id}({player_name})-{url_id}: {e}")
             continue
 
-flush_log_to_s3("player_statistics_log")
+flush_log_to_s3("scrape/player_statistics_log")
 log_lines.clear()

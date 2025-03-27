@@ -84,5 +84,5 @@ for index, row in df_player_ids.iloc[:2].iterrows():
             log_text(f"Error scraping {player_name}-{player_id} vs {opponent_name}-{opponent_id}: {e}")
             continue
 
-flush_log_to_s3("h2h")
+flush_log_to_s3("scrape/h2h")
 log_lines.clear()

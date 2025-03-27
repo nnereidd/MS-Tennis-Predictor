@@ -10,6 +10,7 @@ import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
 from cleaner_functions import (
+    log_scraped_data,
     log_text,
     flush_log_to_s3,
     log_lines, 
@@ -28,14 +29,10 @@ s3_client = boto3.client(
 )
 
 cleaning_map = {
-    "winners-errors": clean_we_ss_pbps,
-    "serve-speed": clean_we_ss_pbps,
-    "pbp-stats": clean_we_ss_pbps,
-    "pbp-points": clean_kp_kg,
-    "pbp-games": clean_kp_kg
+
 }
 
-prefix = "raw/player_statistics/"
+prefix = "raw/match_charting_project/"
 response = s3_client.list_objects_v2(Bucket=s3_bucket, Prefix=prefix)
 
 for obj in response.get("Contents", []):
@@ -49,7 +46,7 @@ for obj in response.get("Contents", []):
 
     player_folder = parts[2]  # player folder
     file_name = parts[3].replace(".parquet", "") 
-    log_text(f"Processing {key}...")
+    print(f"Processing {key}...")
 
     clean_fn = cleaning_map.get(file_name)
 
@@ -65,7 +62,4 @@ for obj in response.get("Contents", []):
     pq.write_table(pa.Table.from_pandas(cleaned_df), output_buffer, compression="snappy")
     s3_client.put_object(Bucket=s3_bucket, Key=output_key, Body=output_buffer.getvalue())
 
-    log_text(f"Cleaned and saved to {output_key}")
-
-flush_log_to_s3("clean/player_statistics_log")
-log_lines.clear()
+    print(f"Cleaned and saved to {output_key}")
