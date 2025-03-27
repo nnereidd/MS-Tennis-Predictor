@@ -14,8 +14,7 @@ from cleaner_functions import (
     log_text,
     flush_log_to_s3,
     log_lines, 
-    clean_we_ss_pbps,
-    clean_kp_kg
+    clean_mcp
 )
 
 load_dotenv()
@@ -27,10 +26,6 @@ s3_client = boto3.client(
     aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY"),
     region_name= os.getenv("AWS_REGION")
 )
-
-cleaning_map = {
-
-}
 
 prefix = "raw/match_charting_project/"
 response = s3_client.list_objects_v2(Bucket=s3_bucket, Prefix=prefix)
@@ -48,14 +43,12 @@ for obj in response.get("Contents", []):
     file_name = parts[3].replace(".parquet", "") 
     print(f"Processing {key}...")
 
-    clean_fn = cleaning_map.get(file_name)
-
     response = s3_client.get_object(Bucket=s3_bucket, Key=key)
     buffer = io.BytesIO(response["Body"].read())
     table = pq.read_table(buffer)
     df = table.to_pandas()
 
-    cleaned_df = clean_fn(df)
+    cleaned_df = clean_mcp(df)
 
     output_key = key.replace("raw/", "processed/")
     output_buffer = io.BytesIO()

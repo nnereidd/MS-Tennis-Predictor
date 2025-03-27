@@ -58,6 +58,7 @@ def clean_column_name(name):
             .replace('/', 'per')
             .replace('%', '')
             .replace(' ', '_')
+            .replace(':', '')
             .lower()
             .strip()
     )
@@ -133,7 +134,6 @@ def clean_we_ss_pbps(df):
 def clean_kp_kg(df): # clean key points and key games (due to different values in some columns)
 
     df.columns = [clean_column_name(col) for col in df.columns]
-    skip_cols = ["match", "result"]
 
     for col in df.columns: 
         if df[col].dtype == "object":
@@ -154,3 +154,21 @@ def clean_kp_kg(df): # clean key points and key games (due to different values i
 
     return df
 
+def clean_mcp(df): # clean match charting project pages
+
+    df.columns = [clean_column_name(col) for col in df.columns]
+
+    for col in df.columns: 
+        if col == "match":
+            df[col] = df[col].astype(str).str.replace(r"\s+", "_", regex=True).str.lower().str.strip()
+
+        elif col == "result":
+            df[col] = df[col].astype(str).apply(clean_match_results)
+        
+        else:
+            if df[col].astype(str).str.contains('%').any():
+                df[col] = pd.to_numeric(df[col].replace("%", "", regex=True), errors="coerce")/100
+
+    df = df.replace(r'^\s*$|^–$|^-$|^0/0$', pd.NA, regex=True)
+
+    return df
