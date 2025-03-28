@@ -1,5 +1,6 @@
 import pandas as pd
-from selenium import webdriver
+import time
+import random
 from selenium.webdriver.edge.service import Service
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -59,6 +60,8 @@ for index, row in df_player_ids.iloc[:2].iterrows():
         except Exception as e:
             log_text(f"Error scraping {player_id} ({player_name})-{url_id}: {e}")
             continue
+
+        time.sleep(random.uniform(1, 3))
 
 flush_log_to_s3("scrape/match_charting_project_log")
 log_lines.clear()

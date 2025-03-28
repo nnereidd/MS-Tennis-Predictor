@@ -1,7 +1,4 @@
 import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.edge.service import Service
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import os
 import io
@@ -32,7 +29,7 @@ for obj in response.get("Contents", []):
     key = obj["Key"]
     if not key.endswith(".parquet"):
         continue # skip non parquet
-    print(f"Processing {key}...")
+    log_text(f"Processing {key}...")
 
     response = s3_client.get_object(Bucket=s3_bucket, Key=key)
     buffer = io.BytesIO(response["Body"].read())
@@ -51,4 +48,7 @@ for obj in response.get("Contents", []):
     pq.write_table(pa.Table.from_pandas(cleaned_df), output_buffer, compression="snappy")
     s3_client.put_object(Bucket=s3_bucket, Key=output_key, Body=output_buffer.getvalue())
 
-    print(f"Cleaned and saved to {output_key}")
+    log_text(f"Cleaned and saved to {output_key}")
+
+flush_log_to_s3("clean/player_statistics_log")
+log_lines.clear()

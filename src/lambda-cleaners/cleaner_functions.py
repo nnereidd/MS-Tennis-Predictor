@@ -68,8 +68,6 @@ def remove_bracketed_text(s):
         return re.sub(r'\s*\([^)]*\)', '', s).strip()
     return s
 
-import re
-
 def clean_match_results(value):
     if not isinstance(value, str):
         return value

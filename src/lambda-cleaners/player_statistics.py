@@ -1,8 +1,4 @@
 import pandas as pd
-import json
-from selenium import webdriver
-from selenium.webdriver.edge.service import Service
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import os
 import io

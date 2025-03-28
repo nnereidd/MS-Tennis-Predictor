@@ -1,4 +1,5 @@
-import requests
+import time
+import random
 from dotenv import load_dotenv
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -83,6 +84,8 @@ for index, row in df_player_ids.iloc[:2].iterrows():
         except Exception as e:
             log_text(f"Error scraping {player_name}-{player_id} vs {opponent_name}-{opponent_id}: {e}")
             continue
+
+        time.sleep(random.uniform(1, 3))
 
 flush_log_to_s3("scrape/h2h")
 log_lines.clear()

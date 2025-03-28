@@ -1,7 +1,5 @@
 import pandas as pd
 import json
-from selenium import webdriver
-from selenium.webdriver.edge.service import Service
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import os
@@ -9,6 +7,8 @@ import io
 import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
+import time
+import random
 from scraper_functions import (
     scrape_webpage,
     log_scraped_data,
@@ -59,6 +59,8 @@ for index, row in df_player_ids.iloc[:2].iterrows():
         except Exception as e:
             log_text(f"Error scraping {player_id}({player_name})-{url_id}: {e}")
             continue
+            
+        time.sleep(random.uniform(1, 3))
 
 flush_log_to_s3("scrape/player_statistics_log")
 log_lines.clear()
