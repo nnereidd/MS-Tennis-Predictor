@@ -1,0 +1,5 @@
+chromium_layer/
+__pycache__/
+*.parquet
+*.zip
+.env

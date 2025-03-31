@@ -34,7 +34,7 @@ df_player_ids = pd.DataFrame(player_list)
 
 url_ids = ["winners-errors", "serve-speed", "pbp-games", "pbp-points", "pbp-stats"]
 
-for index, row in df_player_ids.iloc[:2].iterrows(): 
+for index, row in df_player_ids.iloc[:3].iterrows(): 
     player_id = str(row["player_id"])
     player_name = row["Player"].strip().replace(" ", "").lower()  # clean name for S3 path
     folder_name = f"{player_name}-{player_id}"

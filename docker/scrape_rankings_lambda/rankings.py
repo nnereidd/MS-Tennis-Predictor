@@ -56,8 +56,8 @@ def main():
             df = pd.DataFrame(rankings, columns=["Elo Rank", "Player", "Age", "Elo", "Hard Elo Rank", "Hard Elo", 
                                                 "Clay Elo Rank", "Clay Elo", "Grass Elo Rank", "Grass Elo", 
                                                 "Peak Month", "Atp Rank", "Log Diff"])
-            df_ranking = df.head(100).copy() 
-            log_text("Created top 100 players data frame")
+            df_ranking = df.head(50).copy() 
+            log_text("Created top 50 players data frame")
 
             df_ranking["Player"] = df_ranking["Player"].str.replace("\xa0", " ", regex=True)
 

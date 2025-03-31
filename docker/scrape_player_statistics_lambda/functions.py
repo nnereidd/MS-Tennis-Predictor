@@ -1,35 +1,31 @@
 import os
 import io
 from datetime import datetime
-from dotenv import load_dotenv
 import boto3
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.edge.service import Service
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
-load_dotenv()
 s3_client = boto3.client("s3")
-s3_bucket = os.getenv("S3_BUCKET")
+s3_bucket = os.environ["S3_BUCKET"]
 
 log_lines = []
 
-def get_edge_driver():
-    # creates the headless edge driver for accessing page
-
-    driver_path = os.getenv("EDGE_DRIVER_PATH")
-    options = webdriver.EdgeOptions()
+def get_chrome_driver():
+    options = Options()
+    options.binary_location = "/usr/bin/chromium-browser"
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--log-level=3")
-    
-    service = Service(driver_path)
-    return webdriver.Edge(service=service, options=options)
+
+    service = Service("/opt/chromedriver")
+    return webdriver.Chrome(service=service, options=options)
+
 
 def make_column_names_unique(headers):
     dup = {}
@@ -46,7 +42,7 @@ def make_column_names_unique(headers):
 def scrape_webpage(player_id, url_id):
     # function to scrape and iterate through the required pages
 
-    driver = get_edge_driver()
+    driver = get_chrome_driver()
     url = "https://www.tennisabstract.com/cgi-bin/player-more.cgi?p=" + player_id + "/Jannik-Sinner&table=" + url_id
     driver.get(url)                                                                 # this part is only image
     html = driver.page_source
@@ -103,15 +99,3 @@ def flush_log_to_s3(file_prefix="scrape_log"):
     buffer.seek(0)
     s3_client.put_object(Bucket=s3_bucket, Key=key, Body=buffer.getvalue())
     print(f"Log text file uploaded to: s3")
-
-def get_chrome_driver():
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-
-    service = Service(ChromeDriverManager().install())
-    return webdriver.Chrome(service=service, options=options)
-
-
-
