@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+from tempfile import mkdtemp
 
 s3_client = boto3.client("s3")
 s3_bucket = os.environ["S3_BUCKET"]
@@ -17,15 +17,30 @@ s3_bucket = os.environ["S3_BUCKET"]
 log_lines = []
 
 def get_chrome_driver():
-    options = Options()
-    options.binary_location = "/usr/bin/chromium-browser"
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    chrome_options = Options()
+    chrome_options.add_argument("--headless=new")  # important for modern headless Chrome
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--disable-dev-tools")
+    chrome_options.add_argument("--no-zygote")
+    chrome_options.add_argument("--single-process")
+    chrome_options.add_argument(f"--user-data-dir={mkdtemp()}")
+    chrome_options.add_argument(f"--data-path={mkdtemp()}")
+    chrome_options.add_argument(f"--disk-cache-dir={mkdtemp()}")
+    chrome_options.add_argument("--remote-debugging-pipe")
+    chrome_options.add_argument("--verbose")
+    chrome_options.add_argument("--log-path=/tmp")
+    
+    # Update this path based on where your shell script installs Chrome
+    chrome_options.binary_location = "/opt/chrome/chrome-linux64/chrome"
 
-    service = Service("/opt/chromedriver")
-    return webdriver.Chrome(service=service, options=options)
+    service = Service(
+        executable_path="/opt/chrome-driver/chromedriver-linux64/chromedriver",
+        service_log_path="/tmp/chromedriver.log"
+    )
 
+    return webdriver.Chrome(service=service, options=chrome_options)
 
 def make_column_names_unique(headers):
     dup = {}
