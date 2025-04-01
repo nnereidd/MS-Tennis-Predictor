@@ -58,7 +58,7 @@ def make_column_names_unique(headers):
             new_headers.append(col)
     return new_headers
 
-def scrape_webpage(player_id, url_id):
+def scrape_webpage(player_id, url_id, timeout = 20):
     # function to scrape and iterate through the required pages
 
     driver = get_chrome_driver()
@@ -66,7 +66,7 @@ def scrape_webpage(player_id, url_id):
     driver.get(url)                                                                 # this part is only image
 
     try:
-        WebDriverWait(driver, 30).until(
+        WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.ID, url_id)) # wait for table to load
         )
     except Exception as e:
