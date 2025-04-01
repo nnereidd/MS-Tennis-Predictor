@@ -7,12 +7,14 @@ import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
 from functions import (
-    scrape_webpage,
+    scrape_with_retry,
     log_scraped_data,
     log_text,
     flush_log_to_s3,
     log_lines, 
 )
+import time 
+import random
 
 def main():
     try:
@@ -20,7 +22,7 @@ def main():
         s3_bucket = os.environ["S3_BUCKET"]
 
         batch_num = int(os.environ.get("BATCH_NUM", 0))  # default to 0 if not set
-        batch_size = 25
+        batch_size = 20
 
         start = batch_size * batch_num # scrape in batches
         end = start + batch_size
@@ -40,7 +42,7 @@ def main():
             for url_id in url_ids: # loop through the respective pages per player
                 try:
                     log_text(f"Scraping {player_id} ({player_name})-{url_id}")
-                    df_stats = scrape_webpage(player_id, url_id)
+                    df_stats = scrape_with_retry(player_id, url_id, retries=1, wait_between=3)
 
                     buffer = io.BytesIO()
                     df_stats.to_parquet(buffer, engine="pyarrow", index=False) # df to parquet
@@ -57,6 +59,10 @@ def main():
                 except Exception as e:
                     log_text(f"Error scraping {player_id}({player_name})-{url_id}: {e}")
                     continue
+
+                time.sleep(random.uniform(0.8, 1.5))
+
+            time.sleep(random.uniform(2, 4)) # for website's server safety
 
     except Exception as e:
         log_text(f"ERROR in player_statistics.py: {str(e)}")

@@ -9,7 +9,11 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from tempfile import mkdtemp
+import time
 
 s3_client = boto3.client("s3")
 s3_bucket = os.environ["S3_BUCKET"]
@@ -60,6 +64,15 @@ def scrape_webpage(player_id, url_id):
     driver = get_chrome_driver()
     url = "https://www.tennisabstract.com/cgi-bin/player-more.cgi?p=" + player_id + "/Jannik-Sinner&table=" + url_id
     driver.get(url)                                                                 # this part is only image
+
+    try:
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.ID, url_id)) # wait for table to load
+        )
+    except Exception as e:
+        driver.quit()
+        raise Exception(f"Timed out waiting for table '{url_id}' on page: {e}")
+
     html = driver.page_source
     driver.quit()
 
@@ -114,3 +127,14 @@ def flush_log_to_s3(file_prefix="scrape_log"):
     buffer.seek(0)
     s3_client.put_object(Bucket=s3_bucket, Key=key, Body=buffer.getvalue())
     print(f"Log text file uploaded to: s3")
+
+def scrape_with_retry(player_id, url_id, retries=1, wait_between=4):
+    for attempt in range(retries + 1):
+        try:
+            return scrape_webpage(player_id, url_id, timeout=30 if attempt == 0 else 15)
+        except Exception as e:
+            if attempt < retries:
+                log_text(f"[Retry] {player_id}-{url_id} failed: {e} — retrying in {wait_between}s")
+                time.sleep(wait_between)
+            else:
+                raise
