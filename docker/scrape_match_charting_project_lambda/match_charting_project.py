@@ -32,7 +32,7 @@ def main():
         player_list = json.loads(player_id_obj["Body"].read())
         df_player_ids = pd.DataFrame(player_list)
 
-        url_ids = ["winners-errors", "serve-speed", "pbp-games", "pbp-points", "pbp-stats"]
+        url_ids = ["mcp-serve", "mcp-return", "mcp-rally", "mcp-tactics"]
 
         for index, row in df_player_ids.iloc[start:end].iterrows(): 
             player_id = str(row["player_id"])
@@ -45,19 +45,19 @@ def main():
                     df_stats = scrape_with_retry(player_id, url_id, retries=1, wait_between=3.5)
 
                     buffer = io.BytesIO()
-                    df_stats.to_parquet(buffer, engine="pyarrow", index=False) # df to parquet
+                    df_stats.to_parquet(buffer, engine="pyarrow", index=False)
                     buffer.seek(0)
 
                     # uploads
-                    s3_path = f"raw/player_statistics/{folder_name}/{url_id}.parquet"
+                    s3_path = f"raw/match_charting_project/{folder_name}/{url_id}.parquet"
                     s3_client.upload_fileobj(buffer, s3_bucket, s3_path)
                     log_text(f"Uploaded {s3_path}")
 
-                    log_scraped_data(df_stats, f"{player_id}-{url_id}", f"raw/player_statistics/{folder_name}")
-                    log_text(f"Logged ACTUAL DATA into logs/raw/player_statistics/{folder_name}")
+                    log_scraped_data(df_stats, f"{player_id}-{url_id}", f"raw/match_charting_project/{folder_name}")
+                    log_text(f"Logged ACTUAL DATA into logs/raw/match_charting_project/{folder_name}")
 
                 except Exception as e:
-                    log_text(f"Error scraping {player_id}({player_name})-{url_id}: {e}")
+                    log_text(f"Error scraping {player_id} ({player_name})-{url_id}: {e}")
                     continue
 
                 time.sleep(random.uniform(0.8, 1.5))
@@ -65,9 +65,9 @@ def main():
             time.sleep(random.uniform(2, 4)) # for website's server safety
 
     except Exception as e:
-        log_text(f"ERROR in player_statistics.py: {str(e)}")
+        log_text(f"ERROR in match_charting_project.py: {str(e)}")
         raise
 
     finally:
-        flush_log_to_s3("scrape/player_statistics_log")
+        flush_log_to_s3("scrape/match_charting_project_log")
         log_lines.clear()

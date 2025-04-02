@@ -1,0 +1,7 @@
+boto3==1.37.13
+requests==2.32.3
+pandas==2.2.3
+beautifulsoup4==4.13.3
+pyarrow==19.0.1
+selenium==4.29.0
+webdriver-manager==4.0.2
