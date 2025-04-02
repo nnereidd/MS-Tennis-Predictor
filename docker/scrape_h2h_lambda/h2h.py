@@ -25,7 +25,7 @@ def main():
         s3_bucket = os.environ["S3_BUCKET"]
 
         batch_num = int(os.environ.get("BATCH_NUM", 0))  # default to 0 if not set
-        batch_size = 5
+        batch_size = 1
 
         start = batch_size * batch_num # scrape in batches
         end = start + batch_size
@@ -43,7 +43,7 @@ def main():
 
             df_opponents = df_player_ids[df_player_ids["player_id"] != player_id] # get player_id of opponents
             
-            for _, opponent_row in df_opponents.iloc[start:end].iterrows():
+            for _, opponent_row in df_opponents.iterrows():
                 opponent_url_name = str(opponent_row["Player"])
                 opponent_name = opponent_row["Player"].strip().lower()
                 opponent_id = str(opponent_row["player_id"])
@@ -69,6 +69,8 @@ def main():
                 except Exception as e:
                     log_text(f"Error scraping {player_name}-{player_id} vs {opponent_name}-{opponent_id}: {e}")
                     continue
+
+                time.sleep(random.uniform(0.8, 1.5))
 
             time.sleep(random.uniform(2, 4)) # for website's server safety
 

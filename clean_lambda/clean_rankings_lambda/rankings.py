@@ -5,7 +5,7 @@ import io
 import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
-from cleaner_functions import (
+from functions import (
     log_text,
     flush_log_to_s3,
     log_lines, 
