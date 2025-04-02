@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Set handler
-CMD ["player_statistics_lambda.handler"]
+CMD ["h2h_lambda.handler"]
 
 
 

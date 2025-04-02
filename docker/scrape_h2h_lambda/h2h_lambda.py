@@ -8,7 +8,7 @@ def handler(event, context):
         print("h2h.py completed successfully")
         return {
             "statusCode": 200,
-            "body": "Player Statistics scraped and stored in S3 successfully!"
+            "body": "h2h scraped and stored in S3 successfully!"
         }
 
     except Exception as e:

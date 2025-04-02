@@ -10,7 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from functions import (
-    get_chrome_driver,
+    scrape_h2h_with_retry,
     log_scraped_data,
     log_text,
     flush_log_to_s3,
@@ -25,7 +25,7 @@ def main():
         s3_bucket = os.environ["S3_BUCKET"]
 
         batch_num = int(os.environ.get("BATCH_NUM", 0))  # default to 0 if not set
-        batch_size = 20
+        batch_size = 5
 
         start = batch_size * batch_num # scrape in batches
         end = start + batch_size
@@ -48,37 +48,11 @@ def main():
                 opponent_name = opponent_row["Player"].strip().lower()
                 opponent_id = str(opponent_row["player_id"])
                 try:
-                    driver = get_chrome_driver()
-                    url = f"https://www.tennisabstract.com/cgi-bin/player-classic.cgi?p={player_url_name}&f=ACareerqqw1&q={opponent_url_name}&q={opponent_url_name}"
-                    driver.get(url)
+                    df_h2h = scrape_h2h_with_retry(player_url_name, opponent_url_name)
 
-                    try:
-                        WebDriverWait(driver, 30).until(
-                            EC.presence_of_element_located((By.ID, opponent_url_name)) # wait for table to load
-                        )
-                    except Exception as e:
-                        driver.quit()
-                        raise Exception(f"Timed out waiting for table '{opponent_url_name}' on page: {e}")
-
-                    html = driver.page_source
-                    driver.quit()
-
-                    soup = BeautifulSoup(html, "html.parser")
-                    table = soup.find("table", {"id": "matches"})
-
-                    rows = table.find_all("tr")
-                    headers = [header.text.strip() for header in rows[0].find_all("th")]
-                    data = []
-
-                    for row in rows[1:]:
-                        columns = [col.text.strip() for col in row.find_all("td")]
-                        if columns:
-                            data.append(columns)
-
-                    df_h2h = pd.DataFrame(data, columns=headers)
-
-                    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  
-                    #     print(df_h2h)
+                    if df_h2h.empty:
+                        log_text(f"No H2H data found for {player_name} vs {opponent_name}, skipping upload.")
+                        continue
 
                     buffer = io.BytesIO()
                     df_h2h.to_parquet(buffer, engine="pyarrow", index=False)
@@ -95,8 +69,6 @@ def main():
                 except Exception as e:
                     log_text(f"Error scraping {player_name}-{player_id} vs {opponent_name}-{opponent_id}: {e}")
                     continue
-
-                time.sleep(random.uniform(1, 3))
 
             time.sleep(random.uniform(2, 4)) # for website's server safety
 
