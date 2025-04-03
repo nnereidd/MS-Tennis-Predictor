@@ -1,14 +1,11 @@
 import os
 import io
 from datetime import datetime
-from dotenv import load_dotenv
 import boto3
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pandas as pd
-import re
 
-load_dotenv()
 s3_client = boto3.client("s3")
 s3_bucket = os.getenv("S3_BUCKET")
 
