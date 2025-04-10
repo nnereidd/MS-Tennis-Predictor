@@ -6,6 +6,7 @@ from airflow.utils.trigger_rule import TriggerRule
 from datetime import timedelta
 import json
 import boto3
+import logging
 
 # DAG default settings
 default_args = {
@@ -29,9 +30,9 @@ S3_BUCKET = 'tennis-predictor-data'
 PLAYER_LIST_KEY = 'raw/rankings/player_list.json'
 
 BATCH_SIZES = {
-    'scrape_player_statistics': 20,
-    'scrape_match_charting_project': 20,
-    'scrape_h2h': 1
+    'scrape_player_statistics_lambda': 20,
+    'scrape_match_charting_project_lambda': 20,
+    'scrape_h2h_lambda': 1
 }
 
 # fetch player count and calculate batch sizes 
@@ -55,26 +56,28 @@ def generate_batches(scraper_name, batch_info):
 # call scraping with dynamic batches
 @task()
 def _run_scraper_lambda(batch):
+    logging.info(f"Invoking Lambda for {batch['scraper']} with batch {batch['batch']}")
     client = boto3.client('lambda')
-    client.invoke(
+    response = client.invoke(
         FunctionName=batch['scraper'],
         Payload=json.dumps({"batch": batch['batch']}).encode('utf-8')
     )
+    logging.info(f"Response: {response['StatusCode']}")
 
 run_scraper_lambda = _run_scraper_lambda
 
 scrape_rankings = LambdaInvokeFunctionOperator(
-    task_id='scrape_rankings',
-    function_name='scrape_rankings',
+    task_id='scrape_rankings_lambda',
+    function_name='scrape_rankings_lambda',
     log_type='Tail',
     dag=dag
 )
 
 cleaning_functions = [
-    'clean_rankings',
-    'clean_player_statistics',
-    'clean_match_charting_project',
-    'clean_h2h'
+    'clean_rankings_lambda',
+    'clean_player_statistics_lambda',
+    'clean_match_charting_project_lambda',
+    'clean_h2h_lambda'
 ]
 
 cleaning_tasks = []
@@ -88,15 +91,12 @@ for cleaner in cleaning_functions:
     )
     cleaning_tasks.append(task)
 
-# DAG Orchestration 
-
+# DAG orchestration
 with dag:
     batch_info = fetch_batch_counts()
-    batch_info >> scrape_rankings >> cleaning_tasks[0]
+    batch_info >> scrape_rankings >> cleaning_tasks[0] 
 
     for i, scraper in enumerate(BATCH_SIZES.keys(), start=1):
         batches = generate_batches.override(task_id=f'generate_{scraper}_batches')(scraper, batch_info)
-        run_scraper_lambda.override(task_id=f'{scraper}_runner').expand(batch=batches) >> cleaning_tasks[i]
-
-
-
+        dependent_batches = scrape_rankings >> batches
+        run_scraper_lambda.override(task_id=f'{scraper}_runner').expand(batch=dependent_batches) >> cleaning_tasks[i]
