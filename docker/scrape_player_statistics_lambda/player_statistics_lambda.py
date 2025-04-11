@@ -3,8 +3,9 @@ import player_statistics
 def handler(event, context):
     print("Scraping player_statistics page...")
 
-    try: # calls ranking.py
-        player_statistics.main() 
+    try: # calls player_statistics.py
+        batch_num = int(event.get("batch", 0))
+        player_statistics.main(batch_num=batch_num) 
         print("player_statistics.py completed successfully")
         return {
             "statusCode": 200,
