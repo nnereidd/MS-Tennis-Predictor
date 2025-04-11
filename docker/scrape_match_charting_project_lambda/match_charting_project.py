@@ -16,12 +16,11 @@ from functions import (
 import time 
 import random
 
-def main():
+def main(batch_num):
     try:
         s3_client = boto3.client("s3")
         s3_bucket = os.environ["S3_BUCKET"]
 
-        batch_num = int(os.environ.get("BATCH_NUM", 0))  # default to 0 if not set
         batch_size = 20
 
         start = batch_size * batch_num # scrape in batches
