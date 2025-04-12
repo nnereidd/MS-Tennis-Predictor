@@ -4,7 +4,6 @@ def handler(event, context):
     print("Scraping h2h page...")
 
     try: # calls ranking.py
-        h2h.main(batch_num=batch_num) 
         batch_num = int(event.get("batch", 0))
         h2h.main(batch_num=batch_num) 
         print("h2h.py completed successfully")
