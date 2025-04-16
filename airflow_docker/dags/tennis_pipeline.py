@@ -38,7 +38,8 @@ BATCH_SIZES = {
 # fetch player count and calculate batch sizes 
 @task()
 def fetch_batch_counts():
-    s3 = boto3.client('s3')
+    session = boto3.Session(profile_name="dar")
+    s3 = session.client('s3')
     obj = s3.get_object(Bucket=S3_BUCKET, Key=PLAYER_LIST_KEY)
     players = json.loads(obj['Body'].read().decode('utf-8'))
     player_count = len(players)
@@ -57,7 +58,8 @@ def generate_batches(scraper_name, batch_info):
 @task()
 def _run_scraper_lambda(batch):
     logging.info(f"Invoking Lambda for {batch['scraper']} with batch {batch['batch']}")
-    client = boto3.client('lambda')
+    session = boto3.Session(profile_name="dar")
+    client = session.client('lambda')
     response = client.invoke(
         FunctionName=batch['scraper'],
         Payload=json.dumps({"batch": batch['batch']}).encode('utf-8')
@@ -70,6 +72,7 @@ scrape_rankings = LambdaInvokeFunctionOperator(
     task_id='scrape_rankings_lambda',
     function_name='scrape_rankings_lambda',
     log_type='Tail',
+    aws_conn_id='aws_dar',
     dag=dag
 )
 
@@ -86,6 +89,7 @@ for cleaner in cleaning_functions:
         task_id=cleaner,
         function_name=cleaner,
         log_type='Tail',
+        aws_conn_id='aws_dar',
         dag=dag,
         trigger_rule=TriggerRule.ALL_SUCCESS
     )

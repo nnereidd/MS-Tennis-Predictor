@@ -78,6 +78,7 @@ x-airflow-common:
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ~/.aws:/home/airflow/.aws:ro
+    - /mnt/c/Users/ddarr/.aws:/home/airflow/.aws:ro
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -99,6 +100,7 @@ services:
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ~/.aws:/home/airflow/.aws:ro
+      - /mnt/c/Users/ddarr/.aws:/home/airflow/.aws:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
@@ -254,6 +256,7 @@ services:
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ~/.aws:/home/airflow/.aws:ro
+      - /mnt/c/Users/ddarr/.aws:/home/airflow/.aws:ro
       - ${AIRFLOW_PROJ_DIR:-.}:/sources
 
   airflow-cli:
