@@ -1,32 +1,32 @@
 # Tennis ATP Men's Singles Predictor (Data Pipeline and Dashboard)
 
-This project is part of a larger goal to predict match outcomes in men's singles tennis using machine learning. Here, the focus is on building a **fully automated data pipeline** and **interactive dashboard** that tracks and visualizes the latest stats for the **top 10 ATP players**. 
+This project is part of a larger goal to predict match outcomes in men's singles tennis using machine learning. Here, the focus is on building a **fully automated data pipeline** and **interactive dashboard** that tracks and visualizes the latest stats for the **top 15 ATP players**. 
 
 ---
 
 ## Project Features
 
-- **Automated Scraping**: Every 2 weeks, the pipeline scrapes updated stats for the top 50 ATP players directly from TennisAbstract website.
+- **Automated Scraping**: Every month, the pipeline scrapes updated stats for the top 15 ATP players directly from TennisAbstract website.
 - **Cloud Infrastructure**: Built on AWS using:
   - **Lambda** using docker, for scraping and cleaning
   - **S3** for cloud storage (raw, logs, textlogs and processed data)
   - **Apache Airflow (MWAA)** for orchestration and parallel processing
-- **Dynamic Dashboard**: A visual dashboard that automatically updates every 2 weeks with the latest player performance metrics.
+- **Dynamic Dashboard**: A visual dashboard that automatically updates every month with the latest player performance metrics.
 - **Data Format**: All data is saved in efficient `.parquet` format, structured by player and metric type.
 
 ---
 
 ## How It Works
 
-This project uses a fully automated, serverless cloud pipeline to gather, process, and store statistical data on the top 50 ATP men's singles players. The goal is to ensure that the data — which powers future visualizations and machine learning — is always fresh and synchronized with the Tennis Abstract website: https://www.tennisabstract.com/.
+This project uses a fully automated, serverless cloud pipeline to gather, process, and store statistical data on the top 15 ATP men's singles players. The goal is to ensure that the data — which powers future visualizations and machine learning — is always fresh and synchronized with the Tennis Abstract website: https://www.tennisabstract.com/.
 
 ### 1. Scraper Lambda Functions
 
-Every 2 weeks, **Airflow (MWAA)** triggers four scraping Lambda functions, each responsible for a different type of player data:
+Every month, **Airflow (MWAA)** triggers four scraping Lambda functions, each responsible for a different type of player data:
 
-- `scrape_rankings` — fetches the current top 50 ATP rankings *(no batching required)*
-- `scrape_player_statistics` — general stats *(batched in groups of 20 players)*
-- `scrape_match_charting_project` — advanced stats from the charting project *(batched in groups of 20)*
+- `scrape_rankings` — fetches the current top 15 ATP rankings *(no batching required)*
+- `scrape_player_statistics` — general stats *(batched in groups of 10 players)*
+- `scrape_match_charting_project` — advanced stats from the charting project *(batched in groups of 10 players)*
 - `scrape_h2h` — head-to-head match data *(batched per player)*
 
 Each function uses Selenium with headless Chrome (inside Docker) to scrape dynamic website content and stores the output in `.parquet` format for S3.

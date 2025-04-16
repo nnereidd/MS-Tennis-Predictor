@@ -21,7 +21,7 @@ def main(batch_num = 0):
         s3_client = boto3.client("s3")
         s3_bucket = os.environ["S3_BUCKET"]
 
-        batch_size = 20
+        batch_size = 10
         start = batch_size * batch_num # scrape in batches
         end = start + batch_size
 

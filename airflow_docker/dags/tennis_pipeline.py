@@ -100,7 +100,17 @@ with dag:
     batch_info = fetch_batch_counts()
     batch_info >> scrape_rankings >> cleaning_tasks[0] 
 
-    for i, scraper in enumerate(BATCH_SIZES.keys(), start=1):
-        batches = generate_batches.override(task_id=f'generate_{scraper}_batches')(scraper, batch_info)
-        dependent_batches = scrape_rankings >> batches
-        run_scraper_lambda.override(task_id=f'{scraper}_runner').expand(batch=dependent_batches) >> cleaning_tasks[i]
+    stats_batches = generate_batches.override(task_id="generate_stats")( 'scrape_player_statistics_lambda', batch_info)
+    match_batches = generate_batches.override(task_id="generate_match")( 'scrape_match_charting_project_lambda', batch_info)
+
+    stats_tasks = run_scraper_lambda.override(task_id="stats_runner", max_active_tis_per_dag=3).expand(batch=stats_batches)
+    match_tasks = run_scraper_lambda.override(task_id="match_runner", max_active_tis_per_dag=3).expand(batch=match_batches)
+
+    h2h_batches = generate_batches.override(task_id="generate_h2h")( 'scrape_h2h_lambda', batch_info)
+    h2h_tasks = run_scraper_lambda.override(task_id="h2h_runner", max_active_tis_per_dag=4).expand(batch=h2h_batches)
+
+    # flow is scrape ps, mcp then scrape h2h then all 4 cleaners
+    scrape_rankings >> [stats_batches, match_batches]
+    stats_tasks >> h2h_batches
+    match_tasks >> h2h_batches
+    h2h_tasks >> cleaning_tasks 
