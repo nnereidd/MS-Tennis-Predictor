@@ -14,7 +14,7 @@ import time
 default_args = {
     'owner': 'airflow',
     'retries': 1,
-    'retry_delay': timedelta(minutes=3),
+    'retry_delay': timedelta(minutes=2),
 }
 
 dag = DAG(
@@ -32,7 +32,7 @@ S3_BUCKET = 'tennis-predictor-data'
 PLAYER_LIST_KEY = 'raw/rankings/player_list.json'
 
 BATCH_SIZES = {
-    'scrape_player_statistics_lambda': 10,
+    'scrape_player_statistics_lambda': 8,
     'scrape_match_charting_project_lambda': 10,
     'scrape_h2h_lambda': 1
 }
