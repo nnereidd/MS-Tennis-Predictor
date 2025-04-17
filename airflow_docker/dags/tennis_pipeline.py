@@ -7,6 +7,7 @@ from datetime import timedelta
 import json
 import boto3
 import logging
+from botocore.config import Config
 import time
 
 # DAG default settings
@@ -31,8 +32,8 @@ S3_BUCKET = 'tennis-predictor-data'
 PLAYER_LIST_KEY = 'raw/rankings/player_list.json'
 
 BATCH_SIZES = {
-    'scrape_player_statistics_lambda': 20,
-    'scrape_match_charting_project_lambda': 20,
+    'scrape_player_statistics_lambda': 10,
+    'scrape_match_charting_project_lambda': 10,
     'scrape_h2h_lambda': 1
 }
 
@@ -60,8 +61,15 @@ def generate_batches(scraper_name, batch_info):
 def _run_scraper_lambda(batch):
     logging.info(f"Invoking Lambda for {batch['scraper']} with batch {batch['batch']}")
     time.sleep(1)
+
+    # Ensures boto3 waits for result
+    config = Config(
+    read_timeout=300,       # 5 minutes max wait
+    connect_timeout=30,     
+    retries={'max_attempts': 2})
+
     session = boto3.Session(profile_name="dar")
-    client = session.client('lambda')
+    client = session.client('lambda', config=config)
     response = client.invoke(
         FunctionName=batch['scraper'],
         Payload=json.dumps({"batch": batch['batch']}).encode('utf-8')
