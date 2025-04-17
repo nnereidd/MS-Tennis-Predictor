@@ -7,6 +7,7 @@ from datetime import timedelta
 import json
 import boto3
 import logging
+import time
 
 # DAG default settings
 default_args = {
@@ -58,6 +59,7 @@ def generate_batches(scraper_name, batch_info):
 @task()
 def _run_scraper_lambda(batch):
     logging.info(f"Invoking Lambda for {batch['scraper']} with batch {batch['batch']}")
+    time.sleep(1)
     session = boto3.Session(profile_name="dar")
     client = session.client('lambda')
     response = client.invoke(
@@ -100,17 +102,14 @@ with dag:
     batch_info = fetch_batch_counts()
     batch_info >> scrape_rankings >> cleaning_tasks[0] 
 
-    stats_batches = generate_batches.override(task_id="generate_stats")( 'scrape_player_statistics_lambda', batch_info)
-    match_batches = generate_batches.override(task_id="generate_match")( 'scrape_match_charting_project_lambda', batch_info)
+    stats_batches = generate_batches.override(task_id="generate_stats_batches")( 'scrape_player_statistics_lambda', batch_info)
+    match_batches = generate_batches.override(task_id="generate_match_batches")( 'scrape_match_charting_project_lambda', batch_info)
 
-    stats_tasks = run_scraper_lambda.override(task_id="stats_runner", max_active_tis_per_dag=3).expand(batch=stats_batches)
-    match_tasks = run_scraper_lambda.override(task_id="match_runner", max_active_tis_per_dag=3).expand(batch=match_batches)
+    stats_tasks = run_scraper_lambda.override(task_id="stats_lambda_runner", max_active_tis_per_dag=3).expand(batch=stats_batches)
+    match_tasks = run_scraper_lambda.override(task_id="match_lambda_runner", max_active_tis_per_dag=3).expand(batch=match_batches)
 
-    h2h_batches = generate_batches.override(task_id="generate_h2h")( 'scrape_h2h_lambda', batch_info)
-    h2h_tasks = run_scraper_lambda.override(task_id="h2h_runner", max_active_tis_per_dag=4).expand(batch=h2h_batches)
+    h2h_batches = generate_batches.override(task_id="generate_h2h_batches")( 'scrape_h2h_lambda', batch_info)
+    h2h_tasks = run_scraper_lambda.override(task_id="h2h_lambda_runner", max_active_tis_per_dag=4).expand(batch=h2h_batches)
 
     # flow is scrape ps, mcp then scrape h2h then all 4 cleaners
-    scrape_rankings >> [stats_batches, match_batches]
-    stats_tasks >> h2h_batches
-    match_tasks >> h2h_batches
-    h2h_tasks >> cleaning_tasks 
+    batch_info >> stats_batches >> stats_tasks >> match_batches >> match_tasks >> h2h_batches >> h2h_tasks >> cleaning_tasks
