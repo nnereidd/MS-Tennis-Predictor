@@ -4,6 +4,7 @@ import io
 import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
+from datetime import datetime
 from functions import (
     log_text,
     flush_log_to_s3,
@@ -32,7 +33,15 @@ def main():
 
             cleaned_df = clean_h2h(df)
 
-            output_key = key.replace("raw/", "processed/")
+            relative_path = key.replace("raw/h2h/", "")  # "alexanderzverev-100644/alexdeminaur-200282.parquet"
+
+            # Spli into folder and file
+            folder, filename = os.path.split(relative_path)  
+
+            file_root, ext = os.path.splitext(filename) 
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            output_key = f"processed/h2h/{folder}/{file_root}_{timestamp}.parquet"
+
             output_buffer = io.BytesIO()
             pq.write_table(pa.Table.from_pandas(cleaned_df), output_buffer, compression="snappy")
             s3_client.put_object(Bucket=s3_bucket, Key=output_key, Body=output_buffer.getvalue())

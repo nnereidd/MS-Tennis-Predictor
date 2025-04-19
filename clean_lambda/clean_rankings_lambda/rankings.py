@@ -4,6 +4,7 @@ import io
 import boto3
 import pyarrow.parquet as pq
 import pyarrow as pa
+from datetime import datetime
 from functions import (
     log_text,
     flush_log_to_s3,
@@ -47,7 +48,14 @@ def main():
 
             cleaned_df = df
 
-            output_key = key.replace("raw/", "processed/")
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+            file_name = os.path.basename(key) 
+            file_root, ext = os.path.splitext(file_name)  #('top_number', '.parquet')
+
+            # new key with timestamp
+            output_key = f"processed/rankings/{file_root}_{timestamp}.parquet"
+
             output_buffer = io.BytesIO()
             pq.write_table(pa.Table.from_pandas(cleaned_df), output_buffer, compression="snappy")
             s3_client.put_object(Bucket=s3_bucket, Key=output_key, Body=output_buffer.getvalue())
