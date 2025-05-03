@@ -1,5 +1,8 @@
 USE SCHEMA tennis_data.processed;
 
+CREATE OR REPLACE PIPE pipe_mcp_rally
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.match_charting_project_rally
 FROM (
   SELECT
@@ -28,6 +31,9 @@ FROM (
 FILE_FORMAT = (TYPE = PARQUET)
 PATTERN = '.*/mcp-rally_.*\\.parquet';
 
+CREATE OR REPLACE PIPE pipe_mcp_return
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.match_charting_project_return
 FROM (
   SELECT
@@ -60,6 +66,9 @@ FROM (
 FILE_FORMAT = (TYPE = PARQUET)
 PATTERN = '.*/mcp-return_.*\\.parquet';
 
+CREATE OR REPLACE PIPE pipe_mcp_serve
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.match_charting_project_serve
 FROM (
   SELECT
@@ -90,6 +99,9 @@ FROM (
 FILE_FORMAT = (TYPE = PARQUET)
 PATTERN = '.*/mcp-serve_.*\\.parquet';
 
+CREATE OR REPLACE PIPE pipe_mcp_tactics
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.match_charting_project_tactics
 FROM (
   SELECT

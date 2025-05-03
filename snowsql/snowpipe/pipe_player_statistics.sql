@@ -1,5 +1,8 @@
 USE SCHEMA tennis_data.processed;
 
+CREATE OR REPLACE PIPE pipe_ps_pbp_points
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.player_statistics_pbp_points
 FROM (
   SELECT
@@ -24,6 +27,9 @@ FROM (
 FILE_FORMAT = (TYPE = PARQUET)
 PATTERN = '.*/pbp-points_.*\\.parquet';
 
+CREATE OR REPLACE PIPE pipe_ps_pbp_games
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.player_statistics_pbp_games
 FROM (
   SELECT
@@ -49,6 +55,9 @@ FROM (
 FILE_FORMAT = (TYPE = PARQUET)
 PATTERN = '.*/pbp-games_.*\\.parquet';
 
+CREATE OR REPLACE PIPE pipe_ps_pbp_stats
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.player_statistics_pbp_stats
 FROM (
   SELECT
@@ -74,6 +83,9 @@ FROM (
 FILE_FORMAT = (TYPE = PARQUET)
 PATTERN = '.*/pbp-stats_.*\\.parquet';
 
+CREATE OR REPLACE PIPE pipe_ps_serve_speed
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.player_statistics_serve_speed
 FROM (
   SELECT
@@ -102,6 +114,9 @@ FROM (
 FILE_FORMAT = (TYPE = PARQUET)
 PATTERN = '.*/serve-speed_.*\\.parquet';
 
+CREATE OR REPLACE PIPE pipe_ps_winners_errors
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.player_statistics_winners_errors
 FROM (
   SELECT

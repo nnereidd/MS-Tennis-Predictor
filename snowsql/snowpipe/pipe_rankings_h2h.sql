@@ -1,5 +1,8 @@
 USE SCHEMA tennis_data.processed;
 
+CREATE OR REPLACE PIPE pipe_rankings
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.rankings
 FROM (
   SELECT
@@ -17,26 +20,23 @@ FROM (
     $1:atp_rank::BIGINT,
     $1:log_diff::FLOAT,
     $1:player_id::BIGINT,
-
-    -- Extract report_date from timestamp in filename
     TO_DATE(LEFT(REGEXP_SUBSTR(metadata$filename, '_\\d{14}'), 9), '_YYYYMMDD') AS report_date,
-
     metadata$filename AS source_file
   FROM @rankings_stage
 )
 FILE_FORMAT = (TYPE = PARQUET)
 PATTERN = '.*ms_rankings_.*\\.parquet';
 
+CREATE OR REPLACE PIPE pipe_h2h
+AUTO_INGEST = TRUE
+AS
 COPY INTO tennis_data.processed.h2h
 FROM (
   SELECT
-
     SPLIT_PART(REGEXP_SUBSTR(metadata$filename, '^processed/h2h/([^/]+)', 1, 1, 'e'), '-', 1) AS player_name,
     SPLIT_PART(REGEXP_SUBSTR(metadata$filename, '^processed/h2h/([^/]+)', 1, 1, 'e'), '-', 2) AS player_id,
-
     SPLIT_PART(REGEXP_SUBSTR(metadata$filename, '[^/]+_\\d{14}\\.parquet$'), '-', 1) AS opponent_name,
     REGEXP_SUBSTR(metadata$filename, '-(\\d+)_\\d{14}\\.parquet$', 1, 1, 'e') AS opponent_id,
-
     TO_DATE(LEFT(REGEXP_SUBSTR(metadata$filename, '_\\d{14}'), 9), '_YYYYMMDD') AS report_date,
 
     $1:date::STRING,
@@ -60,7 +60,7 @@ FROM (
     $1:games_won_by_loser::BIGINT,
     $1:total_minutes::BIGINT,
     $1:"__index_level_0__"::BIGINT,
-
+    
     metadata$filename AS source_file
   FROM @h2h_stage
 )
